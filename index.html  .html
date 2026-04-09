@@ -1,0 +1,1130 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Cuisineo</title>
+<link href="https://fonts.googleapis.com/css2?family=Cairo:wght@300;400;600;700;900&family=Tajawal:wght@300;400;500;700;800&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --primary: #C8390A;
+    --primary-dark: #9E2B06;
+    --amber: #E07B00;
+    --green: #1E8C4A;
+    --cream: #FAFAF8;
+    --white: #FFFFFF;
+    --deep: #181210;
+    --mid: #4A3728;
+    --muted: #8A7A72;
+    --border: #EDE8E4;
+  }
+
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+
+  body {
+    font-family: 'Cairo', sans-serif;
+    background: var(--cream);
+    color: var(--deep);
+    min-height: 100vh;
+    overflow-x: hidden;
+    -webkit-font-smoothing: antialiased;
+  }
+
+  .page-wrapper {
+    max-width: 480px; margin: 0 auto;
+    padding-bottom: 64px;
+    background: var(--white); min-height: 100vh;
+    box-shadow: 0 20px 60px rgba(0,0,0,0.13);
+  }
+
+  @keyframes fadeUp {
+    from { opacity:0; transform:translateY(16px); }
+    to   { opacity:1; transform:translateY(0); }
+  }
+
+  /* ── NAV ── */
+  .nav-bar {
+    background: var(--white); border-bottom: 1px solid var(--border);
+    padding: 15px 22px;
+    display: flex; align-items: center; justify-content: space-between;
+    position: sticky; top: 0; z-index: 100;
+  }
+  .brand-mark { display: flex; align-items: center; gap: 10px; }
+  .brand-logo {
+    width: 34px; height: 34px; background: var(--primary);
+    border-radius: 9px; display: flex; align-items: center; justify-content: center;
+    flex-shrink: 0;
+  }
+  .brand-logo svg { width: 18px; height: 18px; }
+  .brand-name {
+    font-family: 'Tajawal'; font-size: 17px; font-weight: 800;
+    color: var(--deep); letter-spacing: -0.3px;
+  }
+  .nav-tag {
+    font-size: 11px; font-weight: 700; color: var(--primary);
+    border: 1.5px solid rgba(200,57,10,0.25);
+    padding: 4px 10px; border-radius: 20px;
+    white-space: nowrap;
+  }
+
+  /* ══════════════════════════════════════
+     CAROUSEL
+     - The wrapper has overflow:hidden
+     - The track is direction:ltr so index 0
+       is always physically the leftmost slide
+     - We use translateX(-N*100%) to reveal slide N
+  ══════════════════════════════════════ */
+  .image-zone {
+    position: relative;
+    width: 100%;
+    aspect-ratio: 4/3;
+    overflow: hidden;
+    background: #eee;
+    /* stop the page from being dragged sideways */
+    touch-action: pan-y;
+  }
+
+  .carousel-track {
+    display: flex;
+    width: 100%;
+    height: 100%;
+    direction: ltr;   /* critical: keeps translateX predictable regardless of RTL page */
+    transition: transform 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+    will-change: transform;
+  }
+
+  /* Each slide fills exactly the zone width */
+  .carousel-slide {
+    flex: 0 0 100%;
+    height: 100%;
+    position: relative;
+    overflow: hidden;
+    background: #f0ebe5;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+
+  /* Image fills the slide, no text/icon on top */
+  .carousel-slide img {
+    position: absolute;
+    inset: 0;
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    display: block;
+  }
+
+  /* Fallback: shown ONLY when image errors. Hidden by default. */
+  .slide-fallback {
+    display: none;           /* hidden until JS shows it */
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 10px;
+    position: absolute;
+    inset: 0;
+    background: #f0ebe5;
+  }
+
+  .slide-fallback-icon {
+    width: 56px; height: 56px; border-radius: 16px;
+    background: rgba(255,255,255,0.9);
+    display: flex; align-items: center; justify-content: center;
+    box-shadow: 0 6px 20px rgba(0,0,0,0.09);
+  }
+  .slide-fallback-icon svg { width: 28px; height: 28px; }
+  .slide-fallback-label { font-size: 12px; color: var(--muted); font-weight: 600; }
+
+  /* ── Video slide ── */
+  .slide-video {
+    background: linear-gradient(135deg, #16213e, #0f3460);
+    cursor: pointer;
+  }
+  .play-btn {
+    position: relative; z-index: 2;
+    display: flex; flex-direction: column; align-items: center; gap: 12px;
+  }
+  .play-circle {
+    width: 68px; height: 68px; border-radius: 50%;
+    background: rgba(255,255,255,0.18);
+    border: 2.5px solid rgba(255,255,255,0.75);
+    backdrop-filter: blur(8px);
+    display: flex; align-items: center; justify-content: center;
+    transition: transform 0.2s, background 0.2s;
+  }
+  .slide-video:hover .play-circle {
+    transform: scale(1.08);
+    background: rgba(255,255,255,0.26);
+  }
+  .play-circle svg { width: 26px; height: 26px; margin-right: -3px; }
+  .play-text { color: rgba(255,255,255,0.72); font-size: 12px; font-weight: 600; letter-spacing: 0.5px; }
+
+  /* ── Arrows ──
+     RTL page visual:
+       [ ← NEXT btn ]  ···image···  [ PREV btn → ]
+     Pressing the LEFT  arrow  → show NEXT slide (index +1)
+     Pressing the RIGHT arrow → show PREV slide (index -1)
+  */
+  .carousel-arrow {
+    position: absolute;
+    top: 50%; transform: translateY(-50%);
+    width: 36px; height: 36px; border-radius: 50%;
+    background: rgba(255,255,255,0.92);
+    border: none; cursor: pointer;
+    display: flex; align-items: center; justify-content: center;
+    box-shadow: 0 3px 14px rgba(0,0,0,0.18);
+    transition: transform 0.18s, box-shadow 0.18s;
+    z-index: 10;
+  }
+  .carousel-arrow:hover {
+    transform: translateY(-50%) scale(1.1);
+    box-shadow: 0 5px 20px rgba(0,0,0,0.24);
+  }
+  .carousel-arrow:active { transform: translateY(-50%) scale(0.93); }
+  .carousel-arrow[disabled] {
+    opacity: 0.28;
+    pointer-events: none;
+  }
+  .carousel-arrow svg { width: 16px; height: 16px; stroke: var(--deep); }
+
+  /* Physical position on screen */
+  .arr-left  { left:  12px; }   /* NEXT  in RTL  */
+  .arr-right { right: 12px; }   /* PREV  in RTL  */
+
+  /* ── Dots ── */
+  .carousel-dots {
+    position: absolute; bottom: 10px;
+    left: 50%; transform: translateX(-50%);
+    display: flex; gap: 5px; z-index: 10;
+    direction: ltr;
+  }
+  .dot {
+    width: 7px; height: 7px; border-radius: 4px;
+    background: rgba(255,255,255,0.5);
+    transition: width 0.28s, background 0.28s;
+    cursor: pointer;
+  }
+  .dot.on { width: 20px; background: #fff; }
+
+  /* counter badge */
+  .slide-counter {
+    position: absolute; bottom: 10px; right: 12px;
+    background: rgba(0,0,0,0.48); backdrop-filter: blur(4px);
+    color: #fff; font-size: 10px; font-weight: 700;
+    padding: 3px 9px; border-radius: 10px;
+    z-index: 10; direction: ltr; letter-spacing: 0.3px;
+  }
+
+  .badge-top {
+    position: absolute; top: 12px; right: 12px;
+    background: #fff; color: var(--primary);
+    font-size: 11px; font-weight: 800;
+    padding: 5px 12px; border-radius: 20px;
+    box-shadow: 0 3px 12px rgba(0,0,0,0.10);
+    border: 1.5px solid rgba(200,57,10,0.14);
+    z-index: 10;
+  }
+
+  /* ── PRODUCT ── */
+  .product-section { padding: 22px 22px 0; animation: fadeUp 0.5s ease both 0.1s; }
+  .product-category {
+    font-size: 11px; font-weight: 700; color: var(--primary);
+    letter-spacing: 1.5px; margin-bottom: 7px; text-transform: uppercase;
+  }
+  .product-name {
+    font-family: 'Tajawal'; font-size: 22px; font-weight: 800;
+    color: var(--deep); line-height: 1.4; margin-bottom: 11px;
+  }
+
+  /* ── Stars: 4.5 ── */
+  .rating-row { display: flex; align-items: center; gap: 7px; margin-bottom: 16px; }
+  .stars { display: flex; align-items: center; gap: 2px; line-height: 1; }
+  .s-full { color: #F5A623; font-size: 16px; }
+  .s-half {
+    display: inline-block;
+    position: relative;
+    width: 8px;      /* only shows the left half of the star */
+    height: 16px;
+    overflow: hidden;
+    vertical-align: middle;
+  }
+  .s-half::before {
+    content: "★";
+    position: absolute;
+    left: 0; top: 0;
+    font-size: 16px;
+    line-height: 1;
+    color: #F5A623;
+    white-space: nowrap;
+  }
+  /* the empty right half */
+  .s-empty {
+    color: #E0E0E0;
+    font-size: 16px;
+  }
+  .rating-val { font-size: 13px; font-weight: 700; color: var(--deep); }
+
+  .product-desc {
+    font-size: 13.5px; color: var(--mid); line-height: 2;
+    padding: 16px 18px;
+    background: #FAF7F4; border-radius: 13px;
+    border-right: 3px solid var(--border); margin-bottom: 20px;
+  }
+  .product-desc li {
+    list-style: none;
+    padding-right: 14px;
+    position: relative;
+    margin-bottom: 6px;
+  }
+  .product-desc li:last-child { margin-bottom: 0; }
+  .product-desc li::before {
+    content: "—";
+    position: absolute;
+    right: 0;
+    color: var(--primary);
+    font-weight: 700;
+  }
+
+  /* ── FEATURES ── */
+  .features-grid {
+    display: grid; grid-template-columns: 1fr 1fr; gap: 8px;
+    margin: 0 22px 20px; animation: fadeUp 0.5s ease both 0.2s;
+  }
+  .feat {
+    background: var(--white); border: 1.5px solid var(--border);
+    border-radius: 11px; padding: 12px 13px;
+    display: flex; align-items: center; gap: 8px;
+    font-size: 12.5px; font-weight: 600; color: var(--mid);
+  }
+  .feat-dot { width: 7px; height: 7px; border-radius: 50%; background: var(--primary); flex-shrink: 0; }
+
+  /* ── PRICE ── */
+  .price-section {
+    margin: 0 22px 20px;
+    border-radius: 16px; overflow: hidden;
+    animation: fadeUp 0.5s ease both 0.25s;
+    position: relative;
+  }
+  .price-body {
+    background: #1E8C4A;
+    padding: 18px 20px 16px;
+    text-align: center;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 20px;
+  }
+  .price-left-info { text-align: right; }
+  .price-row {
+    display: flex; align-items: baseline;
+    justify-content: center; gap: 5px;
+  }
+  .price-num {
+    font-family: 'Tajawal'; font-size: 42px; font-weight: 900;
+    color: #ffffff; line-height: 1;
+  }
+  .price-cur { font-size: 16px; font-weight: 700; color: rgba(255,255,255,0.9); }
+  .price-old { font-size: 13px; color: rgba(255,255,255,0.6); text-decoration: line-through; font-weight: 500; margin-top: 2px; }
+  .saving-chip {
+    background: rgba(255,255,255,0.18);
+    border: 1.5px solid rgba(255,255,255,0.35);
+    color: white; font-size: 12px; font-weight: 800;
+    padding: 6px 12px; border-radius: 10px;
+    text-align: center; white-space: nowrap;
+  }
+
+  /* ── QUANTITY ── */
+  .qty-section { margin: 0 22px 20px; animation: fadeUp 0.5s ease both 0.3s; }
+  .section-title { font-size: 13px; font-weight: 700; color: var(--mid); margin-bottom: 11px; }
+  .qty-row {
+    display: flex; align-items: center;
+    background: var(--white); border: 1.5px solid var(--border);
+    border-radius: 13px; overflow: hidden;
+    box-shadow: 0 2px 6px rgba(0,0,0,0.04);
+  }
+  .qty-btn {
+    width: 58px; height: 52px; border: none; background: transparent;
+    font-size: 22px; font-weight: 700; color: var(--primary); cursor: pointer;
+    transition: background 0.15s; flex-shrink: 0;
+  }
+  .qty-btn:hover { background: rgba(200,57,10,0.05); }
+  .qty-btn:active { background: rgba(200,57,10,0.10); }
+  .qty-btn:disabled { color: #ccc; cursor: not-allowed; }
+  .qty-val {
+    flex: 1; text-align: center;
+    font-family: 'Tajawal'; font-size: 21px; font-weight: 900; color: var(--deep);
+    border-right: 1.5px solid var(--border);
+    border-left: 1.5px solid var(--border);
+    line-height: 52px; user-select: none;
+  }
+  .qty-meta { display: flex; justify-content: space-between; margin-top: 7px; padding: 0 2px; }
+  .qty-max-label { font-size: 11px; color: var(--muted); }
+  .qty-total { font-size: 12px; color: var(--muted); }
+  .qty-total strong { color: var(--primary); font-weight: 700; }
+
+  /* ── CTA ── */
+  .cta-section { padding: 0 22px; animation: fadeUp 0.5s ease both 0.4s; }
+  .cta-btn {
+    width: 100%; padding: 17px;
+    background: var(--primary); color: white; border: none;
+    border-radius: 15px;
+    font-family: 'Tajawal'; font-size: 17px; font-weight: 800; cursor: pointer;
+    box-shadow: 0 8px 26px rgba(200,57,10,0.28);
+    transition: background 0.2s, transform 0.15s, box-shadow 0.2s;
+    position: relative; overflow: hidden;
+  }
+  .cta-btn::before {
+    content:''; position:absolute; top:0; left:-100%; width:100%; height:100%;
+    background: linear-gradient(90deg,transparent,rgba(255,255,255,0.15),transparent);
+    transition: left 0.5s;
+  }
+  .cta-btn:hover::before { left:100%; }
+  .cta-btn:hover { background: var(--primary-dark); transform: translateY(-2px); box-shadow: 0 12px 32px rgba(200,57,10,0.35); }
+  .cta-btn:active { transform: translateY(0); }
+
+  .trust-bar { display: flex; justify-content: center; gap: 28px; margin-top: 16px; }
+  .trust-item {
+    display: flex; flex-direction: column; align-items: center;
+    gap: 5px; font-size: 10.5px; font-weight: 600; color: var(--muted);
+  }
+  .trust-icon {
+    width: 30px; height: 30px; border-radius: 9px;
+    background: #FAF7F4; border: 1.5px solid var(--border);
+    display: flex; align-items: center; justify-content: center;
+  }
+  .trust-icon svg { width: 14px; height: 14px; stroke: var(--mid); }
+
+  /* ── VIDEO MODAL ── */
+  .video-overlay {
+    display: none;
+    position: fixed; inset: 0;
+    background: rgba(0,0,0,0.88);
+    z-index: 2000;
+    align-items: center; justify-content: center;
+    padding: 24px;
+  }
+  .video-overlay.open { display: flex; }
+  .video-box {
+    position: relative;
+    width: 100%; max-width: 480px;
+    background: #000; border-radius: 16px; overflow: hidden;
+  }
+  .video-box video { width: 100%; display: block; max-height: 70vh; }
+  .video-close {
+    position: absolute; top: 10px; left: 10px;
+    width: 34px; height: 34px; border-radius: 50%;
+    background: rgba(255,255,255,0.18); border: none;
+    color: white; font-size: 18px; cursor: pointer;
+    display: flex; align-items: center; justify-content: center;
+    backdrop-filter: blur(4px);
+    z-index: 10;
+  }
+
+  /* ── ORDER MODAL ── */
+  .modal-overlay {
+    position: fixed; inset: 0;
+    background: rgba(10,5,0,0.55); backdrop-filter: blur(6px);
+    z-index: 1000; display: flex; align-items: flex-end; justify-content: center;
+    opacity: 0; pointer-events: none; transition: opacity 0.3s ease;
+  }
+  .modal-overlay.active { opacity: 1; pointer-events: all; }
+  .modal-sheet {
+    background: var(--white); border-radius: 28px 28px 0 0;
+    padding: 28px 22px 40px; width: 100%; max-width: 480px;
+    transform: translateY(100%);
+    transition: transform 0.38s cubic-bezier(0.34,1.2,0.64,1);
+    max-height: 90vh; overflow-y: auto;
+  }
+  .modal-overlay.active .modal-sheet { transform: translateY(0); }
+  .modal-handle { width: 40px; height: 4px; background: #E0D8D0; border-radius: 2px; margin: 0 auto 20px; }
+  .modal-title { font-family: 'Tajawal'; font-size: 20px; font-weight: 800; color: var(--deep); text-align: center; margin-bottom: 4px; }
+  .modal-subtitle { font-size: 12.5px; color: var(--muted); text-align: center; margin-bottom: 22px; }
+  .modal-summary {
+    background: #FAF7F4; border-radius: 13px; border: 1.5px solid var(--border);
+    padding: 13px 16px; display: flex; justify-content: space-between; align-items: center;
+    margin-bottom: 20px;
+  }
+  .ms-label { font-size: 13px; color: var(--mid); font-weight: 600; }
+  .ms-val { font-family: 'Tajawal'; font-size: 16px; font-weight: 900; color: var(--primary); }
+  .form-row { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 10px; }
+  .form-group { margin-bottom: 10px; }
+  .form-label { display: block; font-size: 12px; font-weight: 700; color: var(--mid); margin-bottom: 6px; }
+  .req { color: var(--primary); }
+  .form-input {
+    width: 100%; padding: 12px 14px;
+    border: 1.5px solid var(--border); border-radius: 11px;
+    font-family: 'Cairo'; font-size: 14px; color: var(--deep);
+    background: #FDFBF9; outline: none;
+    transition: border-color 0.2s, box-shadow 0.2s; direction: rtl;
+  }
+  .form-input:focus { border-color: var(--primary); box-shadow: 0 0 0 3px rgba(200,57,10,0.08); background: white; }
+  .form-input::placeholder { color: #C0B5AE; }
+  .form-input.error { border-color: var(--primary); background: rgba(200,57,10,0.03); }
+  select.form-input {
+    appearance: none;
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='16' height='16' viewBox='0 0 24 24' fill='none' stroke='%234A3728' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpolyline points='6 9 12 15 18 9'%3E%3C/polyline%3E%3C/svg%3E");
+    background-repeat: no-repeat;
+    background-position: left 12px center;
+    background-size: 14px;
+    padding-left: 35px;
+  }
+  .phone-error-msg { font-size: 11px; color: var(--primary); margin-top: 4px; display: none; }
+  .phone-error-msg.show { display: block; }
+  .section-divider { height: 1px; background: var(--border); margin: 14px 0; }
+  .phone-group { display: flex; flex-direction: column; gap: 8px; }
+  .phone-row { display: flex; gap: 8px; align-items: center; }
+  .phone-row .form-input { flex: 1; }
+  .remove-phone {
+    width: 36px; height: 36px; border-radius: 9px;
+    background: rgba(200,57,10,0.06); border: none;
+    color: var(--primary); font-size: 14px; cursor: pointer;
+    display: flex; align-items: center; justify-content: center;
+    flex-shrink: 0; transition: background 0.2s;
+  }
+  .remove-phone:hover { background: rgba(200,57,10,0.12); }
+  .add-phone-btn {
+    background: transparent; border: 1.5px dashed rgba(200,57,10,0.3);
+    border-radius: 11px; padding: 10px; color: var(--primary);
+    font-family: 'Cairo'; font-size: 12.5px; font-weight: 700; cursor: pointer;
+    width: 100%; display: flex; align-items: center; justify-content: center; gap: 6px;
+    margin-top: 6px; transition: background 0.2s;
+  }
+  .add-phone-btn:hover { background: rgba(200,57,10,0.04); }
+  .submit-btn {
+    width: 100%; padding: 16px; margin-top: 18px;
+    background: var(--primary); color: white; border: none; border-radius: 13px;
+    font-family: 'Tajawal'; font-size: 16px; font-weight: 800; cursor: pointer;
+    box-shadow: 0 6px 20px rgba(200,57,10,0.25);
+    transition: background 0.2s, transform 0.15s;
+  }
+  .submit-btn:hover { background: var(--primary-dark); transform: translateY(-1px); }
+
+  /* ── SUCCESS ── */
+  .success-overlay {
+    display: none; position: fixed; inset: 0;
+    background: rgba(10,5,0,0.72); backdrop-filter: blur(8px);
+    z-index: 2000; align-items: center; justify-content: center; padding: 24px;
+  }
+  .success-overlay.show { display: flex; animation: fadeIn 0.3s ease; }
+  @keyframes fadeIn { from{opacity:0} to{opacity:1} }
+  .success-card {
+    background: white; border-radius: 24px; padding: 36px 28px;
+    text-align: center; max-width: 360px; width: 100%;
+    box-shadow: 0 30px 80px rgba(0,0,0,0.2);
+    animation: popUp 0.4s cubic-bezier(0.34,1.3,0.64,1) both;
+  }
+  @keyframes popUp { from{transform:scale(0.85);opacity:0} to{transform:scale(1);opacity:1} }
+  .success-check {
+    width: 68px; height: 68px; border-radius: 50%;
+    background: linear-gradient(135deg,#1E8C4A,#25B35E);
+    display: flex; align-items: center; justify-content: center;
+    margin: 0 auto 18px; box-shadow: 0 12px 30px rgba(30,140,74,0.3);
+  }
+  .success-check svg { width: 30px; height: 30px; stroke: white; }
+  .success-title { font-family: 'Tajawal'; font-size: 20px; font-weight:800; color: var(--deep); margin-bottom: 10px; }
+  .success-msg { font-size: 13.5px; color: var(--mid); line-height: 1.75; margin-bottom: 24px; }
+  .success-close {
+    background: var(--primary); color: white; border: none;
+    padding: 13px 32px; border-radius: 12px;
+    font-family: 'Tajawal'; font-size: 15px; font-weight: 700; cursor: pointer;
+    box-shadow: 0 6px 18px rgba(200,57,10,0.25);
+  }
+</style>
+</head>
+<body>
+<div class="page-wrapper">
+
+  <!-- NAV -->
+  <div class="nav-bar">
+    <div class="brand-mark">
+      <div class="brand-logo">
+        <svg viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2.2"
+             stroke-linecap="round" stroke-linejoin="round">
+          <path d="M3 9.5L12 3l9 6.5V20a1 1 0 0 1-1 1H4a1 1 0 0 1-1-1V9.5z"/>
+          <path d="M9 21V12h6v9"/>
+        </svg>
+      </div>
+      <span class="brand-name">Cuisineo</span>
+    </div>
+    <div class="nav-tag">متجر رسمي</div>
+  </div>
+
+  <!-- CAROUSEL -->
+  <div class="image-zone" id="imageZone">
+
+    <div class="carousel-track" id="track">
+
+      <!-- ── Slide 1 ── -->
+      <div class="carousel-slide">
+        <img src="IMG_2568.jpg" alt="صورة 1">
+        <div class="slide-fallback">
+          <div class="slide-fallback-icon">
+            <svg viewBox="0 0 24 24" fill="none" stroke="#C8390A" stroke-width="1.8"
+                 stroke-linecap="round" stroke-linejoin="round">
+              <rect x="3" y="3" width="18" height="18" rx="3"/>
+              <circle cx="8.5" cy="8.5" r="1.5"/>
+              <polyline points="21 15 16 10 5 21"/>
+            </svg>
+          </div>
+          <span class="slide-fallback-label">صورة ١</span>
+        </div>
+      </div>
+
+      <!-- ── Slide 2 ── -->
+      <div class="carousel-slide">
+        <img src="IMG_2569.jpg" alt="صورة 2">
+        <div class="slide-fallback">
+          <div class="slide-fallback-icon">
+            <svg viewBox="0 0 24 24" fill="none" stroke="#1E8C4A" stroke-width="1.8"
+                 stroke-linecap="round" stroke-linejoin="round">
+              <rect x="3" y="3" width="18" height="18" rx="3"/>
+              <circle cx="8.5" cy="8.5" r="1.5"/>
+              <polyline points="21 15 16 10 5 21"/>
+            </svg>
+          </div>
+          <span class="slide-fallback-label">صورة ٢</span>
+        </div>
+      </div>
+
+      <!-- ── Slide 3 ── -->
+      <div class="carousel-slide">
+        <img src="IMG_2566.jpg" alt="صورة 3">
+        <div class="slide-fallback">
+          <div class="slide-fallback-icon">
+            <svg viewBox="0 0 24 24" fill="none" stroke="#E07B00" stroke-width="1.8"
+                 stroke-linecap="round" stroke-linejoin="round">
+              <rect x="3" y="3" width="18" height="18" rx="3"/>
+              <circle cx="8.5" cy="8.5" r="1.5"/>
+              <polyline points="21 15 16 10 5 21"/>
+            </svg>
+          </div>
+          <span class="slide-fallback-label">صورة ٣</span>
+        </div>
+      </div>
+
+      <!-- ── Slide 4 ── -->
+      <div class="carousel-slide">
+        <img src="IMG_2563.jpg" alt="صورة 4">
+        <div class="slide-fallback">
+          <div class="slide-fallback-icon">
+            <svg viewBox="0 0 24 24" fill="none" stroke="#7B3FA0" stroke-width="1.8"
+                 stroke-linecap="round" stroke-linejoin="round">
+              <rect x="3" y="3" width="18" height="18" rx="3"/>
+              <circle cx="8.5" cy="8.5" r="1.5"/>
+              <polyline points="21 15 16 10 5 21"/>
+            </svg>
+          </div>
+          <span class="slide-fallback-label">صورة ٤</span>
+        </div>
+      </div>
+
+      <!-- ── Slide 5 ── -->
+      <div class="carousel-slide">
+        <img src="IMG_2567.jpg" alt="صورة 5">
+        <div class="slide-fallback">
+          <div class="slide-fallback-icon">
+            <svg viewBox="0 0 24 24" fill="none" stroke="#1565C0" stroke-width="1.8"
+                 stroke-linecap="round" stroke-linejoin="round">
+              <rect x="3" y="3" width="18" height="18" rx="3"/>
+              <circle cx="8.5" cy="8.5" r="1.5"/>
+              <polyline points="21 15 16 10 5 21"/>
+            </svg>
+          </div>
+          <span class="slide-fallback-label">صورة ٥</span>
+        </div>
+      </div>
+
+      <!-- ── Slide 6 — VIDEO ── -->
+      <div class="carousel-slide slide-video" onclick="openVideo()">
+        <div class="play-btn">
+          <div class="play-circle">
+            <svg viewBox="0 0 24 24" fill="white" stroke="none">
+              <polygon points="6,3 20,12 6,21"/>
+            </svg>
+          </div>
+          <span class="play-text">اضغط لمشاهدة الفيديو</span>
+        </div>
+      </div>
+
+    </div><!-- end track -->
+
+    <!-- Arrow: RIGHT side → NEXT slide -->
+    <button class="carousel-arrow arr-right" id="arrNext" aria-label="التالي">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor"
+           stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+        <polyline points="9 18 15 12 9 6"/>
+      </svg>
+    </button>
+
+    <!-- Arrow: LEFT side → PREV slide -->
+    <button class="carousel-arrow arr-left" id="arrPrev" aria-label="السابق">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor"
+           stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+        <polyline points="15 18 9 12 15 6"/>
+      </svg>
+    </button>
+
+    <div class="carousel-dots" id="dots"></div>
+    <div class="slide-counter" id="counter">1 / 6</div>
+
+
+  </div><!-- end image-zone -->
+
+  <!-- PRODUCT INFO -->
+  <div class="product-section">
+    <div class="product-category">منتجات الطبخ</div>
+    <div class="product-name">قطّاعة الخضروات متعددة الوظائف 10 في 1 مع حاوية تخزين</div>
+
+    <!-- 4.5 stars — fixed half-star rendering -->
+    <div class="rating-row">
+      <div class="stars">
+        <span class="s-full">★</span>
+        <span class="s-full">★</span>
+        <span class="s-full">★</span>
+        <span class="s-full">★</span>
+        <!--
+          Half star: a 8px-wide box clips the left half of ★
+          followed by the right-half empty star
+        -->
+        <span class="s-half"></span><span class="s-empty">★</span>
+      </div>
+      <span class="rating-val">4.5</span>
+    </div>
+
+    <div class="product-desc">
+      <ul>
+        <li><strong>تقطيع سريع ومتساوي</strong> — مكعبات، شرائح، ومبشور في ثواني</li>
+        <li><strong>حاوية مدمجة</strong> — تحافظ على مطبخك نظيف ومرتب</li>
+        <li><strong>آمنة وسهلة الاستعمال</strong> — بدون خطر على اليدين</li>
+        <li><strong>توفر عليك وقت وطاقة</strong> — حضّر طبق كامل في أقل من دقيقة</li>
+        <li><strong>مثالية للاستعمال اليومي</strong> — الحل الذكي لكل بيت</li>
+      </ul>
+    </div>
+  </div>
+
+  <!-- FEATURES -->
+  <div class="features-grid">
+    <div class="feat"><div class="feat-dot"></div>جودة عالية</div>
+    <div class="feat"><div class="feat-dot"></div>توصيل سريع</div>
+    <div class="feat"><div class="feat-dot"></div>ضمان الرضا</div>
+    <div class="feat"><div class="feat-dot"></div>دفع عند الاستلام</div>
+  </div>
+
+  <!-- PRICE -->
+  <div class="price-section">
+    <div class="price-body">
+      <div class="price-left-info">
+        <div class="price-row">
+          <div class="price-num">2450</div>
+          <div class="price-cur">دج</div>
+        </div>
+        <div class="price-old">3000 دج</div>
+      </div>
+      <div class="saving-chip">وفّر<br>18%</div>
+    </div>
+  </div>
+
+  <!-- QUANTITY -->
+  <div class="qty-section">
+    <div class="section-title">الكمية</div>
+    <div class="qty-row">
+      <button class="qty-btn" id="qtyMinus" onclick="changeQty(-1)">−</button>
+      <div class="qty-val" id="qty">1</div>
+      <button class="qty-btn" id="qtyPlus"  onclick="changeQty(1)">+</button>
+    </div>
+    <div class="qty-meta">
+      <span class="qty-max-label">الحد الأقصى: 13 قطعة</span>
+      <span class="qty-total">المجموع: <strong id="total">2,450 دج</strong></span>
+    </div>
+  </div>
+
+  <!-- CTA -->
+  <div class="cta-section">
+    <button class="cta-btn" onclick="openModal()">اطلب الان وادفع عند الاستلام 🚚 </button>
+    <div class="trust-bar">
+      <div class="trust-item">
+        <div class="trust-icon">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/>
+          </svg>
+        </div>
+        آمن 100%
+      </div>
+      <div class="trust-item">
+        <div class="trust-icon">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <rect x="1" y="3" width="15" height="13" rx="2"/>
+            <path d="M16 8h4l3 5v3h-7V8z"/>
+            <circle cx="5.5" cy="18.5" r="2.5"/>
+            <circle cx="18.5" cy="18.5" r="2.5"/>
+          </svg>
+        </div>
+        دفع عند التسليم
+      </div>
+    </div>
+  </div>
+
+</div><!-- end page-wrapper -->
+
+<!-- VIDEO MODAL -->
+<div class="video-overlay" id="videoOverlay" onclick="closeVideoIfBg(event)">
+  <div class="video-box">
+    <button class="video-close" onclick="closeVideo()">✕</button>
+    <!--
+      Replace "video.mp4" with your actual video file name.
+      Put the video file in the same folder as this HTML file.
+    -->
+    <video id="videoPlayer" controls playsinline>
+      <source src="video.mp4" type="video/mp4">
+      متصفحك لا يدعم تشغيل الفيديو.
+    </video>
+  </div>
+</div>
+
+<!-- ORDER MODAL -->
+<div class="modal-overlay" id="modalOverlay" onclick="handleOverlayClick(event)">
+  <div class="modal-sheet">
+    <div class="modal-handle"></div>
+    <div class="modal-title">تفاصيل الطلب</div>
+    <div class="modal-subtitle">أدخل معلوماتك لإتمام الطلب</div>
+    <div class="modal-summary">
+      <span class="ms-label">المجموع — <span id="modal-qty">1 قطعة</span></span>
+      <span class="ms-val" id="modal-total">2,450 دج</span>
+    </div>
+    <div class="form-row">
+      <div>
+        <label class="form-label">الاسم <span class="req">*</span></label>
+        <input type="text" class="form-input" id="firstName" placeholder="الاسم">
+      </div>
+      <div>
+        <label class="form-label">اللقب <span class="req">*</span></label>
+        <input type="text" class="form-input" id="lastName" placeholder="اللقب">
+      </div>
+    </div>
+    <div class="section-divider"></div>
+    <div class="form-row">
+      <div>
+        <label class="form-label">الولاية <span class="req">*</span></label>
+        <select class="form-input" id="wilaya">
+          <option value="">اختر الولاية</option>
+        </select>
+      </div>
+      <div>
+        <label class="form-label">الحي <span class="req">*</span></label>
+        <input type="text" class="form-input" id="quartier" placeholder="الحي / البلدية">
+      </div>
+    </div>
+    <div class="section-divider"></div>
+    <div class="form-group">
+      <label class="form-label">رقم الهاتف <span class="req">*</span></label>
+      <div class="phone-group" id="phoneGroup">
+        <div class="phone-row">
+          <input type="tel" class="form-input phone-input"
+                 placeholder="05 XX XX XX XX" id="phone0"
+                 inputmode="numeric"
+                 onkeypress="return onlyNumbers(event)"
+                 oninput="sanitizePhone(this)">
+        </div>
+      </div>
+      <div class="phone-error-msg" id="phoneError">
+        يجب أن يكون رقم هاتف جزائري صحيح (10 أرقام تبدأ بـ 05، 06، أو 07)
+      </div>
+      <button class="add-phone-btn" onclick="addPhone()">
+        <svg width="13" height="13" viewBox="0 0 24 24" fill="none"
+             stroke="currentColor" stroke-width="2.5" stroke-linecap="round">
+          <line x1="12" y1="5" x2="12" y2="19"/>
+          <line x1="5" y1="12" x2="19" y2="12"/>
+        </svg>
+        إضافة رقم آخر
+      </button>
+    </div>
+    <button class="submit-btn" onclick="submitOrder()">تأكيد الطلب</button>
+  </div>
+</div>
+
+<!-- SUCCESS -->
+<div class="success-overlay" id="successOverlay">
+  <div class="success-card">
+    <div class="success-check">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"
+           stroke-linecap="round" stroke-linejoin="round">
+        <polyline points="20 6 9 17 4 12"/>
+      </svg>
+    </div>
+    <div class="success-title">تم استلام طلبك</div>
+    <div class="success-msg">سيتواصل معك فريقنا خلال أقل من 24 ساعة لتأكيد الطلب وترتيب التوصيل.</div>
+    <button class="success-close" onclick="closeSuccess()">حسناً، شكراً</button>
+  </div>
+</div>
+
+<script>
+/* ══════════════════════════════════════════════
+   CAROUSEL
+   track direction: ltr → translateX(-N*100%) always works
+   Arrow logic (RTL page):
+     Left  arrow (arr-left)  = NEXT  slide (+1)
+     Right arrow (arr-right) = PREV  slide (-1)
+══════════════════════════════════════════════ */
+(function () {
+  const TOTAL   = 6;
+  let   cur     = 0;
+  let   timer   = null;
+
+  const track   = document.getElementById('track');
+  const counter = document.getElementById('counter');
+  const dotsWrap= document.getElementById('dots');
+  const btnNext = document.getElementById('arrNext'); // left  side
+  const btnPrev = document.getElementById('arrPrev'); // right side
+
+  /* Build dots */
+  for (let i = 0; i < TOTAL; i++) {
+    const d = document.createElement('div');
+    d.className = 'dot' + (i === 0 ? ' on' : '');
+    d.addEventListener('click', () => goTo(i));
+    dotsWrap.appendChild(d);
+  }
+
+  /* Image fallback */
+  document.querySelectorAll('.carousel-slide img').forEach(img => {
+    const fallback = img.nextElementSibling; // .slide-fallback
+    function showFallback() {
+      img.style.display = 'none';
+      if (fallback) fallback.style.display = 'flex';
+    }
+    img.addEventListener('error', showFallback);
+    if (img.complete && img.naturalWidth === 0) showFallback();
+  });
+
+  /* Core update */
+  function refresh() {
+    /* Move track: negative translateX shows the slide at index cur */
+    track.style.transform = `translateX(-${cur * 100}%)`;
+
+    /* Dots */
+    dotsWrap.querySelectorAll('.dot').forEach((d, i) =>
+      d.classList.toggle('on', i === cur)
+    );
+
+    /* Counter */
+    counter.textContent = `${cur + 1} / ${TOTAL}`;
+
+    /* Arrow disabled states */
+    btnPrev.disabled = cur === 0;
+    btnNext.disabled = cur === TOTAL - 1;
+  }
+
+  function goTo(idx) {
+    cur = Math.max(0, Math.min(TOTAL - 1, idx));
+    refresh();
+    resetTimer();
+  }
+
+  function resetTimer() {
+    clearInterval(timer);
+    timer = setInterval(() => goTo((cur + 1) % TOTAL), 4500);
+  }
+
+  /* Expose for buttons */
+  btnNext.addEventListener('click', () => goTo(cur + 1)); // left  = next
+  btnPrev.addEventListener('click', () => goTo(cur - 1)); // right = prev
+
+  /* Touch swipe — in RTL, swipe-left = next, swipe-right = prev */
+  let tx = 0;
+  track.addEventListener('touchstart', e => { tx = e.touches[0].clientX; }, { passive: true });
+  track.addEventListener('touchend',   e => {
+    const dx = e.changedTouches[0].clientX - tx;
+    if (Math.abs(dx) > 40) goTo(cur + (dx < 0 ? 1 : -1));
+  }, { passive: true });
+
+  refresh();
+  resetTimer();
+})();
+
+/* ══════════════════════════════════════════════
+   VIDEO
+══════════════════════════════════════════════ */
+function openVideo() {
+  document.getElementById('videoOverlay').classList.add('open');
+  document.getElementById('videoPlayer').play();
+}
+function closeVideo() {
+  document.getElementById('videoOverlay').classList.remove('open');
+  const v = document.getElementById('videoPlayer');
+  v.pause(); v.currentTime = 0;
+}
+function closeVideoIfBg(e) {
+  if (e.target === document.getElementById('videoOverlay')) closeVideo();
+}
+
+/* ══════════════════════════════════════════════
+   WILAYAS
+══════════════════════════════════════════════ */
+const WILAYAS = [
+  "01 - Adrar","02 - Chlef","03 - Laghouat","04 - Oum El Bouaghi","05 - Batna",
+  "06 - Béjaïa","07 - Biskra","08 - Béchar","09 - Blida","10 - Bouira",
+  "11 - Tamanrasset","12 - Tébessa","13 - Tlemcen","14 - Tiaret","15 - Tizi Ouzou",
+  "16 - Alger","17 - Djelfa","18 - Jijel","19 - Sétif","20 - Saïda",
+  "21 - Skikda","22 - Sidi Bel Abbès","23 - Annaba","24 - Guelma","25 - Constantine",
+  "26 - Médéa","27 - Mostaganem","28 - M'Sila","29 - Mascara","30 - Ouargla",
+  "31 - Oran","32 - El Bayadh","33 - Illizi","34 - Bordj Bou Arreridj","35 - Boumerdès",
+  "36 - El Tarf","37 - Tindouf","38 - Tissemsilt","39 - El Oued","40 - Khenchela",
+  "41 - Souk Ahras","42 - Tipaza","43 - Mila","44 - Aïn Defla","45 - Naâma",
+  "46 - Aïn Témouchent","47 - Ghardaïa","48 - Relizane",
+  "49 - Timimoun","50 - Bordj Badji Mokhtar","51 - Ouled Djellal",
+  "52 - Béni Abbès","53 - In Salah","54 - In Guezzam","55 - Touggourt",
+  "56 - Djanet","57 - El M'Ghair","58 - El Meniaa",
+  "59 - Aflou","60 - Barika","61 - El Kantara",
+  "62 - Bir El Ater","63 - El Aricha","64 - Ksar Chellala",
+  "65 - Aïn Oussera","66 - Messaad","67 - Ksar El Boukhari",
+  "68 - Bou Saâda","69 - El Abiodh Sidi Cheikh"
+];
+(function () {
+  const sel = document.getElementById('wilaya');
+  WILAYAS.forEach(w => {
+    const o = document.createElement('option');
+    o.value = w; o.textContent = w;
+    sel.appendChild(o);
+  });
+})();
+
+/* ══════════════════════════════════════════════
+   QUANTITY
+══════════════════════════════════════════════ */
+const PRICE = 2450;
+const MAX   = 13;
+let   qty   = 1;
+
+function changeQty(d) {
+  qty = Math.max(1, Math.min(MAX, qty + d));
+  document.getElementById('qty').textContent = qty;
+  document.getElementById('total').textContent = (qty * PRICE).toLocaleString() + ' دج';
+  document.getElementById('qtyMinus').disabled = qty <= 1;
+  document.getElementById('qtyPlus').disabled  = qty >= MAX;
+}
+document.getElementById('qtyMinus').disabled = true;
+
+/* ══════════════════════════════════════════════
+   PHONE
+══════════════════════════════════════════════ */
+let phoneCount = 1;
+
+function onlyNumbers(e) {
+  return /[0-9]/.test(String.fromCharCode(e.which));
+}
+function sanitizePhone(el) {
+  el.value = el.value.replace(/[^0-9]/g, '').slice(0, 10);
+}
+function validPhone(p) {
+  return /^(05|06|07)\d{8}$/.test(p.replace(/\s/g,''));
+}
+
+function addPhone() {
+  if (phoneCount >= 3) return;
+  phoneCount++;
+  const g = document.getElementById('phoneGroup');
+  const r = document.createElement('div');
+  r.className = 'phone-row';
+  r.innerHTML = `
+    <input type="tel" class="form-input phone-input"
+           placeholder="05 XX XX XX XX" id="phone${phoneCount-1}"
+           inputmode="numeric"
+           onkeypress="return onlyNumbers(event)"
+           oninput="sanitizePhone(this)">
+    <button class="remove-phone" onclick="removePhone(this)">✕</button>`;
+  g.appendChild(r);
+}
+function removePhone(btn) { btn.parentElement.remove(); phoneCount--; }
+
+/* ══════════════════════════════════════════════
+   ORDER MODAL
+══════════════════════════════════════════════ */
+function openModal() {
+  document.getElementById('modalOverlay').classList.add('active');
+  document.body.style.overflow = 'hidden';
+  document.getElementById('modal-qty').textContent   = qty + ' قطعة';
+  document.getElementById('modal-total').textContent = (qty * PRICE).toLocaleString() + ' دج';
+}
+function closeModal() {
+  document.getElementById('modalOverlay').classList.remove('active');
+  document.body.style.overflow = '';
+}
+function handleOverlayClick(e) {
+  if (e.target === document.getElementById('modalOverlay')) closeModal();
+}
+
+/* ══════════════════════════════════════════════
+   BARK
+══════════════════════════════════════════════ */
+const BARK_KEY = "yhrSddNSj3RmAdHvEjs95j";
+async function sendToBark(d) {
+  const msg = `طلب جديد!\n${d.firstName} ${d.lastName}\n${d.wilaya} - ${d.quartier}\n${d.phones}\nالكمية: ${d.qty}\nالمجموع: ${d.total} دج`;
+  try {
+    await fetch(`https://api.day.app/${BARK_KEY}/${encodeURIComponent(msg)}?sound=cashregister`);
+  } catch(e) { console.error(e); }
+}
+
+/* ══════════════════════════════════════════════
+   SUBMIT
+══════════════════════════════════════════════ */
+function submitOrder() {
+  const fn  = document.getElementById('firstName');
+  const ln  = document.getElementById('lastName');
+  const wl  = document.getElementById('wilaya');
+  const qt  = document.getElementById('quartier');
+  const err = document.getElementById('phoneError');
+
+  let ok = true;
+  [fn, ln, wl, qt].forEach(el => {
+    if (!el.value.trim()) {
+      el.classList.add('error');
+      setTimeout(() => el.classList.remove('error'), 2000);
+      ok = false;
+    }
+  });
+
+  const phones = [];
+  let phoneErr = false;
+  for (let i = 0; i < phoneCount; i++) {
+    const p = document.getElementById(`phone${i}`);
+    if (!p) continue;
+    const v = p.value.trim();
+    if (!v) {
+      p.classList.add('error');
+      setTimeout(() => p.classList.remove('error'), 2000);
+      ok = false;
+    } else if (!validPhone(v)) {
+      p.classList.add('error');
+      setTimeout(() => p.classList.remove('error'), 2000);
+      phoneErr = true; ok = false;
+    } else { phones.push(v); }
+  }
+
+  err.classList.toggle('show', phoneErr);
+  if (phoneErr) setTimeout(() => err.classList.remove('show'), 3500);
+  if (!ok) return;
+
+  sendToBark({
+    firstName: fn.value.trim(), lastName: ln.value.trim(),
+    wilaya: wl.value, quartier: qt.value.trim(),
+    phones: phones.join(' / '), qty, total: (qty * PRICE).toLocaleString()
+  });
+
+  closeModal();
+  document.getElementById('successOverlay').classList.add('show');
+}
+
+function closeSuccess() {
+  document.getElementById('successOverlay').classList.remove('show');
+  ['firstName','lastName','quartier'].forEach(id => {
+    const el = document.getElementById(id); if (el) el.value = '';
+  });
+  document.getElementById('wilaya').value = '';
+  document.querySelectorAll('.phone-input').forEach(el => el.value = '');
+  document.querySelectorAll('#phoneGroup .phone-row:not(:first-child)').forEach(r => r.remove());
+  phoneCount = 1;
+  document.getElementById('phoneError').classList.remove('show');
+}
+</script>
+</body>
+</html>
